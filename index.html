@@ -94,9 +94,7 @@ const NOTIFICATIONS = [
 // ═══════════════════════════════════════════════════════════════
 // API KEY · LOCALSTORAGE
 // ═══════════════════════════════════════════════════════════════
-const API_KEY_KEY = "aurora_genezen_api_key";
-const getApiKey = () => { try { return localStorage.getItem(API_KEY_KEY) || ""; } catch(e){ return ""; } };
-const saveApiKey = (k) => { try { if (k) localStorage.setItem(API_KEY_KEY, k); else localStorage.removeItem(API_KEY_KEY); } catch(e){} };
+// API calls go through /api/chat (serverless proxy — API key stored in Vercel env vars)
 
 // Voice appointments persistence
 const VOICE_APPTS_KEY = "aurora_voice_appointments";
@@ -125,35 +123,7 @@ const Badge = ({ children, color = C.navy }) => (
 // ═══════════════════════════════════════════════════════════════
 // API KEY MODAL
 // ═══════════════════════════════════════════════════════════════
-function ApiKeyModal({ open, onClose, initialMessage }) {
-  const [key, setKey] = useState("");
-  useEffect(() => { if (open) setKey(getApiKey()); }, [open]);
-  if (!open) return null;
-  const handleSave = () => { saveApiKey(key.trim()); onClose(); };
-  return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(15,25,35,0.85)", backdropFilter: "blur(8px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: C.white, borderRadius: 22, padding: 24, maxWidth: 340, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
-        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 22, color: C.navy, marginBottom: 8 }}>🔑 Configurar Aurora</div>
-        <div style={{ color: C.grayMid, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>
-          {initialMessage || "Para que Aurora funcione necesita su API key de Anthropic."}
-          <br /><br />
-          Obténgala en <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style={{ color: C.sky, fontWeight: 700 }}>console.anthropic.com</a>
-        </div>
-        <input
-          type="password"
-          value={key}
-          onChange={e => setKey(e.target.value)}
-          placeholder="sk-ant-..."
-          style={{ width: "100%", padding: "14px 16px", border: `2px solid ${key ? C.sky : "#DDE3F0"}`, borderRadius: 12, fontSize: 14, outline: "none", marginBottom: 16, fontFamily: "monospace" }}
-        />
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "14px", background: C.grayLight, color: C.gray, border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Después</button>
-          <button onClick={handleSave} style={{ flex: 1, padding: "14px", background: `linear-gradient(90deg, ${C.navyDark}, ${C.navy})`, color: C.white, border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Guardar</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// ApiKeyModal eliminado — API key ahora vive en Vercel env vars
 
 // ═══════════════════════════════════════════════════════════════
 // LOGIN
@@ -271,7 +241,7 @@ function HomeScreen({ onNav, notifCount }) {
 // ═══════════════════════════════════════════════════════════════
 // VOICE BOOK SCREEN  ← NUEVO (reemplaza ScannerScreen)
 // ═══════════════════════════════════════════════════════════════
-function VoiceBookScreen({ onApiKeyMissing }) {
+function VoiceBookScreen() {
   // phase: idle | conversing | confirm | success
   const [phase, setPhase] = useState("idle");
   const [convo, setConvo] = useState([]); // {role:'aurora'|'user', text}
@@ -426,11 +396,6 @@ function VoiceBookScreen({ onApiKeyMissing }) {
 
   // ─── Claude API ──────────────────────────────────────────────
   const askClaude = async (userInput) => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      onApiKeyMissing();
-      return null;
-    }
     const history = convoRef.current.map(t => `${t.role === "aurora" ? "AURORA" : "PACIENTE"}: ${t.text}`).join("\n");
     const currentInput = userInput !== null ? userInput : "(El paciente acaba de iniciar la llamada)";
 
@@ -478,14 +443,9 @@ Responde AHORA. Tu respuesta debe ser EXACTAMENTE este XML y nada más (sin pre�
     setVState("thinking");
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 600,
@@ -494,7 +454,6 @@ Responde AHORA. Tu respuesta debe ser EXACTAMENTE este XML y nada más (sin pre�
       });
       const raw = await res.text();
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403) { onApiKeyMissing(); return null; }
         throw new Error("HTTP " + res.status);
       }
       const data = JSON.parse(raw);
@@ -530,7 +489,6 @@ Responde AHORA. Tu respuesta debe ser EXACTAMENTE este XML y nada más (sin pre�
       setError("Su navegador no soporta reconocimiento de voz. Pruebe Chrome o Safari.");
       return;
     }
-    if (!getApiKey()) { onApiKeyMissing(); return; }
 
     setPhase("conversing");
     setConvo([]);
@@ -807,7 +765,7 @@ Responde AHORA. Tu respuesta debe ser EXACTAMENTE este XML y nada más (sin pre�
 // ═══════════════════════════════════════════════════════════════
 // RECORDS (simplificado, sin scannedDocs)
 // ═══════════════════════════════════════════════════════════════
-function RecordsScreen({ onApiKeyMissing }) {
+function RecordsScreen() {
   const [expanded, setExpanded] = useState(null);
   const [aiSummary, setAiSummary] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
@@ -816,22 +774,15 @@ function RecordsScreen({ onApiKeyMissing }) {
   useEffect(() => { setVoiceAppts(loadVoiceAppts()); }, []);
 
   const handleAI = async () => {
-    const apiKey = getApiKey();
-    if (!apiKey) { onApiKeyMissing(); return; }
     setLoadingAI(true); setAiSummary("");
     const prompt = `Eres un asistente médico de Clínica Genezen. Resume en lenguaje muy sencillo (para un paciente de 67 años) el historial médico del paciente Carlos Alberto Ruiz. Datos: Última consulta: Hipertensión arterial leve con Dra. Gómez (Cardiología) el 12 Mayo 2026. Exámenes: Hemograma completo normal (3 Abril 2026). Control preventivo anual con Dr. Pardo (18 Feb 2026). Vitales: Presión 128/82, Glucosa 98 mg/dL, Peso 74kg. Sé positivo, claro, breve (máx 4 frases), y al final da una recomendación de salud simple.`;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 600, messages: [{ role: "user", content: prompt }] })
       });
-      if (!res.ok) { if (res.status === 401 || res.status === 403) onApiKeyMissing(); throw new Error("HTTP " + res.status); }
+      if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       setAiSummary(data.content?.find(b => b.type === "text")?.text || "No disponible.");
     } catch { setAiSummary("No disponible en este momento."); }
@@ -1068,15 +1019,8 @@ function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [screen, setScreen] = useState("home");
   const [notifCount, setNotifCount] = useState(2);
-  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
-  const [apiKeyMessage, setApiKeyMessage] = useState("");
 
   const handleNav = (s) => { setScreen(s); if (s === "notif") setNotifCount(0); };
-
-  const openApiKeyModal = (msg) => {
-    setApiKeyMessage(msg || "");
-    setApiKeyModalOpen(true);
-  };
 
   const NAV_ITEMS = [
     { id: "home", icon: "🏠", label: "Inicio" },
@@ -1096,22 +1040,12 @@ function App() {
           <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>📶 🔋</span>
         </div>
 
-        {/* API key access button (top-right when logged in) */}
-        {loggedIn && (
-          <button
-            onClick={() => openApiKeyModal()}
-            style={{ position: "absolute", top: 50, right: 14, zIndex: 30, background: "rgba(255,255,255,0.15)", color: C.white, border: "none", borderRadius: 999, padding: "4px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer", letterSpacing: 1, backdropFilter: "blur(8px)" }}
-            title="Configurar API key">
-            🔑 API
-          </button>
-        )}
-
         {/* Screen */}
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
           {!loggedIn && <LoginScreen onLogin={() => setLoggedIn(true)} />}
           {loggedIn && screen === "home" && <HomeScreen onNav={handleNav} notifCount={notifCount} />}
-          {loggedIn && screen === "records" && <RecordsScreen onApiKeyMissing={() => openApiKeyModal("Para usar el resumen con IA necesita su API key de Anthropic.")} />}
-          {loggedIn && screen === "voice" && <VoiceBookScreen onApiKeyMissing={() => openApiKeyModal("Para que Aurora pueda atenderlo necesita su API key de Anthropic.")} />}
+          {loggedIn && screen === "records" && <RecordsScreen />}
+          {loggedIn && screen === "voice" && <VoiceBookScreen />}
           {loggedIn && screen === "book" && <BookScreen />}
           {loggedIn && screen === "notif" && <NotifsScreen />}
         </div>
@@ -1147,8 +1081,6 @@ function App() {
         <div style={{ background: loggedIn ? C.white : C.grayLight, padding: "6px 0 10px", display: "flex", justifyContent: "center" }}>
           <div style={{ width: 130, height: 5, background: "#C0C8D4", borderRadius: 3 }} />
         </div>
-
-        <ApiKeyModal open={apiKeyModalOpen} onClose={() => setApiKeyModalOpen(false)} initialMessage={apiKeyMessage} />
       </div>
     </div>
   );
