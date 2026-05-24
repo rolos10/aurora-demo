@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Aurora · Clínica Genezen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0F1923;
+      color: #404040;
+      -webkit-font-smoothing: antialiased;
+    }
+    #root { min-height: 100vh; }
+    button { font-family: inherit; }
+    input { font-family: inherit; }
+
+    @keyframes fabPulse { 0%,100%{box-shadow:0 0 0 0 rgba(75,191,234,0.5)} 50%{box-shadow:0 0 0 10px rgba(75,191,234,0)} }
+    @keyframes auroraGlow { 0%,100%{transform:scale(1);opacity:0.55} 50%{transform:scale(1.12);opacity:0.85} }
+    @keyframes ledBlink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes bubbleIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    @keyframes pop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+    @keyframes spinSlow { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIG · CLÍNICA GENEZEN
+// ═══════════════════════════════════════════════════════════════
+const C = {
+  navy: "#2B4DA8", sky: "#4BBFEA", mint: "#5BBF8A",
+  navyDark: "#1D3580", skyLight: "#E8F6FD", mintLight: "#EAF7F0",
+  gray: "#404040", grayLight: "#F4F6FA", grayMid: "#9AA3B2",
+  white: "#FFFFFF", red: "#E05252", orange: "#F5A623",
+};
+
+const PATIENT = {
+  name: "Carlos Alberto Ruiz", id: "CC 10.234.567", age: 67,
+  blood: "O+", eps: "Sánitas", avatar: "CR",
+  phone: "300 123 4567",
+  nextAppt: { date: "Lun 26 May", time: "9:30 AM", doctor: "Dra. Gómez", spec: "Cardiología" },
+  vitals: { bp: "128/82", glucose: "98 mg/dL", weight: "74 kg", lastVisit: "12 May 2026" },
+};
+
+const SPECIALTIES = [
+  { icon: "🫀", name: "Cardiología", available: 3 },
+  { icon: "🧠", name: "Neurología", available: 5 },
+  { icon: "🦷", name: "Odontología", available: 8 },
+  { icon: "👁️", name: "Oftalmología", available: 2 },
+  { icon: "🦴", name: "Ortopedia", available: 6 },
+  { icon: "🩺", name: "Medicina General", available: 12 },
+  { icon: "🌿", name: "Dermatología", available: 4 },
+  { icon: "👶", name: "Pediatría", available: 7 },
+  { icon: "🌸", name: "Ginecología", available: 5 },
+];
+
+const DOCTORS = {
+  "Cardiología": [
+    { name: "Dra. Laura Gómez", rating: 4.9, exp: "15 años", times: ["8:00 AM", "9:30 AM", "11:00 AM"] },
+    { name: "Dr. Sergio Molina", rating: 4.7, exp: "12 años", times: ["2:00 PM", "3:30 PM", "5:00 PM"] },
+  ],
+  "Medicina General": [
+    { name: "Dr. Ricardo Pardo", rating: 4.8, exp: "20 años", times: ["7:00 AM", "8:30 AM", "10:00 AM"] },
+    { name: "Dra. María Torres", rating: 4.9, exp: "18 años", times: ["1:00 PM", "2:30 PM", "4:00 PM"] },
+  ],
+};
+
+const RECORDS = [
+  { date: "12 May 2026", type: "Consulta", doctor: "Dra. Gómez", dx: "Hipertensión arterial leve", tag: "Cardiología" },
+  { date: "03 Abr 2026", type: "Examen", doctor: "Lab. Genezen", dx: "Hemograma completo — Resultados normales", tag: "Laboratorio" },
+  { date: "18 Feb 2026", type: "Consulta", doctor: "Dr. Pardo", dx: "Control preventivo anual", tag: "Medicina General" },
+];
+
+const NOTIFICATIONS = [
+  { id: 1, icon: "📅", title: "Cita confirmada", msg: "Lunes 26 May a las 9:30 AM con Dra. Gómez", time: "Hace 2h", unread: true },
+  { id: 2, icon: "💊", title: "Recordatorio de medicamento", msg: "Enalapril 10mg — Tomar con el desayuno", time: "Hace 5h", unread: true },
+  { id: 3, icon: "📋", title: "Resultado de examen listo", msg: "Su hemograma ya está disponible para revisar", time: "Ayer", unread: false },
+  { id: 4, icon: "🩺", title: "Control preventivo", msg: "Recuerde su control anual. ¡Agéndelo hoy!", time: "Hace 3 días", unread: false },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// API KEY · LOCALSTORAGE
+// ═══════════════════════════════════════════════════════════════
+const API_KEY_KEY = "aurora_genezen_api_key";
+const getApiKey = () => { try { return localStorage.getItem(API_KEY_KEY) || ""; } catch(e){ return ""; } };
+const saveApiKey = (k) => { try { if (k) localStorage.setItem(API_KEY_KEY, k); else localStorage.removeItem(API_KEY_KEY); } catch(e){} };
+
+// Voice appointments persistence
+const VOICE_APPTS_KEY = "aurora_voice_appointments";
+const loadVoiceAppts = () => {
+  try { return JSON.parse(localStorage.getItem(VOICE_APPTS_KEY) || "[]"); } catch(e){ return []; }
+};
+const saveVoiceAppt = (appt) => {
+  try {
+    const list = loadVoiceAppts();
+    list.unshift(appt);
+    localStorage.setItem(VOICE_APPTS_KEY, JSON.stringify(list));
+  } catch(e){}
+};
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+const Avatar = ({ initials, size = 48, bg = C.navy }) => (
+  <div style={{ width: size, height: size, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", color: C.white, fontWeight: 700, fontSize: size * 0.35, flexShrink: 0 }}>{initials}</div>
+);
+
+const Badge = ({ children, color = C.navy }) => (
+  <span style={{ background: color + "20", color, fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>{children}</span>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// API KEY MODAL
+// ═══════════════════════════════════════════════════════════════
+function ApiKeyModal({ open, onClose, initialMessage }) {
+  const [key, setKey] = useState("");
+  useEffect(() => { if (open) setKey(getApiKey()); }, [open]);
+  if (!open) return null;
+  const handleSave = () => { saveApiKey(key.trim()); onClose(); };
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "rgba(15,25,35,0.85)", backdropFilter: "blur(8px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: C.white, borderRadius: 22, padding: 24, maxWidth: 340, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 22, color: C.navy, marginBottom: 8 }}>🔑 Configurar Aurora</div>
+        <div style={{ color: C.grayMid, fontSize: 14, lineHeight: 1.5, marginBottom: 16 }}>
+          {initialMessage || "Para que Aurora funcione necesita su API key de Anthropic."}
+          <br /><br />
+          Obténgala en <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style={{ color: C.sky, fontWeight: 700 }}>console.anthropic.com</a>
+        </div>
+        <input
+          type="password"
+          value={key}
+          onChange={e => setKey(e.target.value)}
+          placeholder="sk-ant-..."
+          style={{ width: "100%", padding: "14px 16px", border: `2px solid ${key ? C.sky : "#DDE3F0"}`, borderRadius: 12, fontSize: 14, outline: "none", marginBottom: 16, fontFamily: "monospace" }}
+        />
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "14px", background: C.grayLight, color: C.gray, border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Después</button>
+          <button onClick={handleSave} style={{ flex: 1, padding: "14px", background: `linear-gradient(90deg, ${C.navyDark}, ${C.navy})`, color: C.white, border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Guardar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════════════
+function LoginScreen({ onLogin }) {
+  const [phone, setPhone] = useState("");
+  const [pass, setPass] = useState("");
+  const [loading, setLoading] = useState(false);
+  const handleLogin = () => { setLoading(true); setTimeout(() => { setLoading(false); onLogin(); }, 1200); };
+  return (
+    <div style={{ minHeight: "100%", background: `linear-gradient(160deg, ${C.navyDark} 0%, ${C.navy} 55%, ${C.sky} 100%)`, display: "flex", flexDirection: "column", padding: "0 0 32px" }}>
+      <div style={{ padding: "52px 32px 32px", textAlign: "center" }}>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 38, color: C.white, letterSpacing: -1, marginBottom: 6 }}>Genezen</div>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 14, color: C.sky, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>Clínica · Aurora</div>
+        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 16, marginTop: 8 }}>Su salud, nuestra prioridad</div>
+      </div>
+      <div style={{ background: C.white, borderRadius: "32px 32px 0 0", flex: 1, padding: "36px 28px" }}>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, fontSize: 24, color: C.navy, marginBottom: 8 }}>Bienvenido</div>
+        <div style={{ color: C.grayMid, fontSize: 17, marginBottom: 36 }}>Ingrese para ver su información de salud</div>
+        <label style={{ display: "block", fontWeight: 700, color: C.gray, fontSize: 17, marginBottom: 8 }}>📱 Número de celular o cédula</label>
+        <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Ej: 3001234567"
+          style={{ width: "100%", padding: "18px 20px", fontSize: 20, border: `2px solid ${phone ? C.sky : "#DDE3F0"}`, borderRadius: 16, outline: "none", boxSizing: "border-box", color: C.gray, fontFamily: "inherit", marginBottom: 20 }} />
+        <label style={{ display: "block", fontWeight: 700, color: C.gray, fontSize: 17, marginBottom: 8 }}>🔒 Contraseña</label>
+        <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••"
+          style={{ width: "100%", padding: "18px 20px", fontSize: 20, border: `2px solid ${pass ? C.sky : "#DDE3F0"}`, borderRadius: 16, outline: "none", boxSizing: "border-box", color: C.gray, fontFamily: "inherit", marginBottom: 32 }} />
+        <button onClick={handleLogin} disabled={loading}
+          style={{ width: "100%", padding: "22px", background: loading ? C.grayMid : `linear-gradient(90deg, ${C.navyDark}, ${C.navy})`, color: C.white, border: "none", borderRadius: 18, fontSize: 20, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", boxShadow: `0 8px 24px ${C.navy}50` }}>
+          {loading ? "Verificando..." : "Ingresar →"}
+        </button>
+        <div style={{ textAlign: "center", marginTop: 24 }}>
+          <span style={{ color: C.sky, fontSize: 17, fontWeight: 600, cursor: "pointer" }}>¿Necesita ayuda? Llame al 📞 018000-GENEZEN</span>
+        </div>
+        <div style={{ marginTop: 28, padding: 20, background: C.skyLight, borderRadius: 16, display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 28 }}>💡</span>
+          <span style={{ color: C.navy, fontSize: 15, fontWeight: 600 }}>Use su número de cédula como usuario y contraseña</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HOME
+// ═══════════════════════════════════════════════════════════════
+function HomeScreen({ onNav, notifCount }) {
+  return (
+    <div style={{ padding: "0 0 100px", background: C.grayLight, minHeight: "100%" }}>
+      <div style={{ background: `linear-gradient(135deg, ${C.navyDark}, ${C.navy})`, padding: "52px 24px 80px", borderRadius: "0 0 36px 36px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 16, marginBottom: 4 }}>Buenos días 👋</div>
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, fontSize: 24, color: C.white }}>Carlos Alberto</div>
+            <div style={{ color: C.sky, fontSize: 15, marginTop: 4 }}>{PATIENT.id} • {PATIENT.age} años</div>
+          </div>
+          <div style={{ position: "relative", cursor: "pointer" }} onClick={() => onNav("notif")}>
+            <Avatar initials={PATIENT.avatar} size={52} bg={C.sky} />
+            {notifCount > 0 && <div style={{ position: "absolute", top: -4, right: -4, background: C.red, color: C.white, borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{notifCount}</div>}
+          </div>
+        </div>
+      </div>
+      <div style={{ margin: "-40px 20px 0", background: C.white, borderRadius: 24, padding: 22, boxShadow: `0 8px 32px rgba(43,77,168,0.15)`, border: `2px solid ${C.sky}30` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <span style={{ fontSize: 20 }}>📅</span>
+          <span style={{ fontWeight: 700, color: C.navy, fontSize: 17 }}>Próxima cita</span>
+          <div style={{ marginLeft: "auto" }}><Badge color={C.mint}>Confirmada</Badge></div>
+        </div>
+        <div style={{ display: "flex", gap: 16 }}>
+          <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.sky})`, color: C.white, borderRadius: 16, padding: "14px 18px", textAlign: "center", minWidth: 70 }}>
+            <div style={{ fontSize: 26, fontWeight: 900 }}>26</div>
+            <div style={{ fontSize: 13, opacity: 0.9 }}>Mayo</div>
+          </div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: C.gray }}>{PATIENT.nextAppt.time}</div>
+            <div style={{ color: C.navy, fontWeight: 700, fontSize: 17 }}>{PATIENT.nextAppt.doctor}</div>
+            <div style={{ color: C.grayMid, fontSize: 15 }}>{PATIENT.nextAppt.spec}</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ padding: "24px 20px 0" }}>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, fontSize: 20, color: C.navy, marginBottom: 16 }}>¿Qué desea hacer?</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          {[
+            { icon: "🎙️", label: "Agendar\npor voz", screen: "voice", bg: `linear-gradient(135deg, ${C.navyDark}, ${C.sky})`, color: C.white, glow: C.navy, isNew: true },
+            { icon: "🗓️", label: "Agendar\nCita", screen: "book", bg: C.navy, color: C.white, glow: C.navy },
+            { icon: "📋", label: "Historia\nClínica", screen: "records", bg: C.mint, color: C.white, glow: C.mint },
+            { icon: "🔔", label: "Notificaciones", screen: "notif", bg: C.grayLight, color: C.navy, border: `2px solid ${C.navy}20` },
+          ].map((a, i) => (
+            <button key={i} onClick={() => onNav(a.screen)}
+              style={{ background: a.bg, color: a.color, border: a.border || "none", borderRadius: 22, padding: "24px 16px", cursor: "pointer", textAlign: "center", fontFamily: "inherit", boxShadow: a.glow ? `0 6px 20px ${a.glow}50` : "none", position: "relative", overflow: "hidden" }}
+              onMouseDown={e => e.currentTarget.style.transform = "scale(0.97)"}
+              onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}>
+              {a.isNew && <div style={{ position: "absolute", top: 0, right: 0, background: C.sky, color: C.white, fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: "0 22px 0 12px" }}>NUEVO</div>}
+              <div style={{ fontSize: 36, marginBottom: 10 }}>{a.icon}</div>
+              <div style={{ fontWeight: 800, fontSize: 17, lineHeight: 1.3, whiteSpace: "pre-line" }}>{a.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{ margin: "24px 20px 0", background: C.white, borderRadius: 22, padding: 20, boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
+        <div style={{ fontWeight: 800, color: C.navy, fontSize: 17, marginBottom: 16 }}>🩺 Últimos indicadores</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {[{ label: "Presión arterial", val: PATIENT.vitals.bp, icon: "🫀" }, { label: "Glucosa", val: PATIENT.vitals.glucose, icon: "🩸" }, { label: "Peso", val: PATIENT.vitals.weight, icon: "⚖️" }, { label: "Última visita", val: PATIENT.vitals.lastVisit, icon: "📆" }].map((v, i) => (
+            <div key={i} style={{ background: C.grayLight, borderRadius: 16, padding: 14 }}>
+              <div style={{ fontSize: 24, marginBottom: 4 }}>{v.icon}</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: C.navy }}>{v.val}</div>
+              <div style={{ fontSize: 13, color: C.grayMid, fontWeight: 600 }}>{v.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VOICE BOOK SCREEN  ← NUEVO (reemplaza ScannerScreen)
+// ═══════════════════════════════════════════════════════════════
+function VoiceBookScreen({ onApiKeyMissing }) {
+  // phase: idle | conversing | confirm | success
+  const [phase, setPhase] = useState("idle");
+  const [convo, setConvo] = useState([]); // {role:'aurora'|'user', text}
+  const [collected, setCollected] = useState({ specialty: null, reason: null, datetime: null });
+  const [stage, setStage] = useState("greeting"); // greeting|specialty|reason|datetime|confirming|done
+  const [vState, setVState] = useState("idle"); // idle|listening|speaking|thinking
+  const [confCode, setConfCode] = useState("");
+  const [error, setError] = useState("");
+
+  const recognitionRef = useRef(null);
+  const voiceRef = useRef(null);
+  const stoppedRef = useRef(false);
+  const canvasRef = useRef(null);
+  const animRef = useRef(null);
+  const collectedRef = useRef(collected);
+  const stageRef = useRef(stage);
+  const convoRef = useRef(convo);
+
+  useEffect(() => { collectedRef.current = collected; }, [collected]);
+  useEffect(() => { stageRef.current = stage; }, [stage]);
+  useEffect(() => { convoRef.current = convo; }, [convo]);
+
+  // ─── Voice helpers ───────────────────────────────────────────
+  const pickSpanishVoice = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const prefs = [
+      v => /es[-_](MX|CO|US|419|ES)/i.test(v.lang) && /female|mujer|paulina|monica|sabina|helena/i.test(v.name),
+      v => /es[-_](MX|CO|US|419)/i.test(v.lang),
+      v => /^es/i.test(v.lang),
+    ];
+    for (const p of prefs) { const f = voices.find(p); if (f) return f; }
+    return voices.find(v => /^es/i.test(v.lang)) || null;
+  };
+
+  const ensureVoices = () => new Promise(resolve => {
+    let v = window.speechSynthesis.getVoices();
+    if (v.length) { voiceRef.current = pickSpanishVoice(); resolve(); return; }
+    window.speechSynthesis.onvoiceschanged = () => { voiceRef.current = pickSpanishVoice(); resolve(); };
+    setTimeout(() => { voiceRef.current = pickSpanishVoice(); resolve(); }, 1200);
+  });
+
+  const speak = (text) => new Promise(resolve => {
+    if (!("speechSynthesis" in window)) { resolve(); return; }
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch(e){} recognitionRef.current = null; }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (voiceRef.current) u.voice = voiceRef.current;
+    u.lang = voiceRef.current?.lang || "es-MX";
+    u.rate = 1.02; u.pitch = 1.08; u.volume = 1;
+    u.onstart = () => { setVState("speaking"); };
+    u.onend = () => { setVState("idle"); resolve(); };
+    u.onerror = () => { setVState("idle"); resolve(); };
+    window.speechSynthesis.speak(u);
+  });
+
+  const listen = () => new Promise((resolve, reject) => {
+    const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!R) { reject(new Error("no-speech-api")); return; }
+    const r = new R();
+    r.lang = "es-MX";
+    r.continuous = false;
+    r.interimResults = false;
+    r.maxAlternatives = 1;
+    recognitionRef.current = r;
+    setVState("listening");
+    let finalText = "";
+    r.onresult = e => { finalText = e.results[0][0].transcript.trim(); };
+    r.onerror = e => { recognitionRef.current = null; setVState("idle"); reject(new Error(e.error || "recog-error")); };
+    r.onend = () => { recognitionRef.current = null; setVState("idle"); resolve(finalText); };
+    try { r.start(); } catch(e){ recognitionRef.current = null; reject(e); }
+  });
+
+  // ─── Visualizer ──────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== "conversing") return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    let t = 0;
+    const bars = 48;
+    const draw = () => {
+      const rect = canvas.getBoundingClientRect();
+      const W = rect.width, H = rect.height;
+      ctx.clearRect(0, 0, W, H);
+      const cx = W / 2, cy = H / 2;
+      for (let i = 0; i < bars; i++) {
+        const angle = (i / bars) * Math.PI * 2;
+        const phase2 = t * 0.08 + i * 0.18;
+        let amp;
+        if (vState === "listening") amp = 14 + Math.abs(Math.sin(phase2)) * 18 + Math.random() * 8;
+        else if (vState === "speaking") amp = 18 + Math.abs(Math.sin(phase2 * 1.4)) * 26;
+        else if (vState === "thinking") amp = 12 + Math.abs(Math.sin(phase2 * 0.9)) * 14;
+        else amp = 10 + Math.abs(Math.sin(phase2 * 0.6)) * 8;
+        const inner = 30, outer = inner + amp;
+        const x1 = cx + Math.cos(angle) * inner;
+        const y1 = cy + Math.sin(angle) * inner;
+        const x2 = cx + Math.cos(angle) * outer;
+        const y2 = cy + Math.sin(angle) * outer;
+        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        if (vState === "speaking") {
+          grad.addColorStop(0, "rgba(75,191,234,0.2)");
+          grad.addColorStop(1, "rgba(75,191,234,1)");
+        } else if (vState === "listening") {
+          grad.addColorStop(0, "rgba(91,191,138,0.2)");
+          grad.addColorStop(1, "rgba(91,191,138,1)");
+        } else if (vState === "thinking") {
+          grad.addColorStop(0, "rgba(43,77,168,0.2)");
+          grad.addColorStop(1, "rgba(43,77,168,1)");
+        } else {
+          grad.addColorStop(0, "rgba(154,163,178,0.2)");
+          grad.addColorStop(1, "rgba(154,163,178,0.8)");
+        }
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+      // center glow
+      const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, 36);
+      if (vState === "speaking") { glow.addColorStop(0, "rgba(75,191,234,0.9)"); glow.addColorStop(1, "rgba(75,191,234,0)"); }
+      else if (vState === "listening") { glow.addColorStop(0, "rgba(91,191,138,0.9)"); glow.addColorStop(1, "rgba(91,191,138,0)"); }
+      else if (vState === "thinking") { glow.addColorStop(0, "rgba(43,77,168,0.9)"); glow.addColorStop(1, "rgba(43,77,168,0)"); }
+      else { glow.addColorStop(0, "rgba(154,163,178,0.5)"); glow.addColorStop(1, "rgba(154,163,178,0)"); }
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(cx, cy, 36, 0, Math.PI * 2); ctx.fill();
+      t++;
+      animRef.current = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(animRef.current); };
+  }, [phase, vState]);
+
+  // ─── Cleanup on unmount ──────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      stoppedRef.current = true;
+      if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch(e){} }
+      window.speechSynthesis?.cancel();
+      cancelAnimationFrame(animRef.current);
+    };
+  }, []);
+
+  // ─── Claude API ──────────────────────────────────────────────
+  const askClaude = async (userInput) => {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      onApiKeyMissing();
+      return null;
+    }
+    const history = convoRef.current.map(t => `${t.role === "aurora" ? "AURORA" : "PACIENTE"}: ${t.text}`).join("\n");
+    const currentInput = userInput !== null ? userInput : "(El paciente acaba de iniciar la llamada)";
+
+    const prompt = `Eres Aurora, recepcionista virtual cálida y eficiente de Clínica Genezen. Agendas citas médicas en español para pacientes ya autenticados en la app.
+
+PACIENTE ACTUAL (ya identificado): ${PATIENT.name}, ${PATIENT.id}, ${PATIENT.age} años, EPS ${PATIENT.eps}.
+
+Tu trabajo es recolectar EN ESTE ORDEN, uno a la vez (NO pidas nombre ni teléfono, ya los conocemos):
+
+1. ESPECIALIDAD — una de: ortopedia, cardiología, urología, dermatología, ginecología, pediatría, oftalmología, neurología, medicina general, odontología
+2. MOTIVO — descripción breve de la consulta
+3. FECHA Y HORA preferidas
+
+REGLAS:
+- Pregunta UNA cosa a la vez, en orden.
+- Saludo inicial: "Hola ${PATIENT.name.split(' ')[0]}, soy Aurora de Clínica Genezen. ¿Para qué especialidad necesita agendar?"
+- Respuestas MUY CORTAS (máximo 18 palabras). Voz en tiempo real, debe ser fluida.
+- Tono cálido pero directo, español natural latinoamericano.
+- Si dice algo fuera de las especialidades, lista 3-4 opciones brevemente.
+- Cuando tengas los 3 datos, pasa a etapa "confirming" y repite todo en una sola oración: "Perfecto, agendo cita de [especialidad] para [fecha y hora], motivo: [motivo]. ¿Confirmamos?"
+- Si confirma (sí, correcto, dale, perfecto, ok, claro), pon <f>true</f> y <e>done</e>.
+- Si pide corregir, vuelve a la etapa correspondiente.
+
+CONVERSACIÓN HASTA AHORA:
+${history || "(ninguna — es el primer turno)"}
+
+ESTADO INTERNO:
+- Etapa: ${stageRef.current}
+- Datos recolectados: ${JSON.stringify(collectedRef.current)}
+
+LO QUE EL PACIENTE ACABA DE DECIR:
+"${currentInput}"
+
+Responde AHORA. Tu respuesta debe ser EXACTAMENTE este XML y nada más (sin preámbulo, sin markdown):
+
+<r>
+<t>texto breve que Aurora dice en voz alta</t>
+<e>greeting|specialty|reason|datetime|confirming|done</e>
+<sp>especialidad o vacío</sp>
+<mo>motivo o vacío</mo>
+<dt>fecha y hora o vacío</dt>
+<f>true o false</f>
+</r>`;
+
+    setVState("thinking");
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 600,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const raw = await res.text();
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) { onApiKeyMissing(); return null; }
+        throw new Error("HTTP " + res.status);
+      }
+      const data = JSON.parse(raw);
+      if (data.error) throw new Error(data.error.message || "API error");
+      const text = (data.content || []).map(c => c.text || "").join("");
+      if (!text) throw new Error("Respuesta vacía");
+
+      const tag = (n) => { const m = text.match(new RegExp("<" + n + ">([\\s\\S]*?)</" + n + ">", "i")); return m ? m[1].trim() : ""; };
+      const nonEmpty = v => (v && v !== "vacío" && v !== "vacio" && v.toLowerCase() !== "null") ? v : null;
+
+      return {
+        spoken: tag("t"),
+        stage: tag("e") || stageRef.current,
+        collected: {
+          specialty: nonEmpty(tag("sp")) || collectedRef.current.specialty,
+          reason: nonEmpty(tag("mo")) || collectedRef.current.reason,
+          datetime: nonEmpty(tag("dt")) || collectedRef.current.datetime,
+        },
+        isFinal: tag("f").toLowerCase() === "true"
+      };
+    } catch (err) {
+      console.error("[Aurora] Error:", err);
+      setError(err.message || "Error de conexión");
+      setTimeout(() => setError(""), 4000);
+      return null;
+    }
+  };
+
+  // ─── Conversation loop ───────────────────────────────────────
+  const runConversation = async () => {
+    await ensureVoices();
+    if (!("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      setError("Su navegador no soporta reconocimiento de voz. Pruebe Chrome o Safari.");
+      return;
+    }
+    if (!getApiKey()) { onApiKeyMissing(); return; }
+
+    setPhase("conversing");
+    setConvo([]);
+    setCollected({ specialty: null, reason: null, datetime: null });
+    setStage("greeting");
+    stoppedRef.current = false;
+
+    const opener = await askClaude(null);
+    if (!opener || stoppedRef.current) return;
+    await processTurn(opener);
+
+    while (!stoppedRef.current && stageRef.current !== "done") {
+      await new Promise(r => setTimeout(r, 400));
+      if (stoppedRef.current) return;
+      let userText = "";
+      try {
+        userText = await listen();
+      } catch (e) {
+        if (stoppedRef.current) return;
+        if (e.message === "no-speech") { await speak("No le escuché. ¿Puede repetir?"); continue; }
+        if (e.message === "not-allowed") { setError("Necesito permiso del micrófono."); return; }
+        if (e.message === "aborted") return;
+        await speak("Perdón, intente de nuevo.");
+        continue;
+      }
+      if (stoppedRef.current) return;
+      if (!userText) { await speak("No le escuché. ¿Puede repetir?"); continue; }
+      setConvo(c => [...c, { role: "user", text: userText }]);
+      const reply = await askClaude(userText);
+      if (!reply || stoppedRef.current) return;
+      await processTurn(reply);
+    }
+
+    if (!stoppedRef.current) {
+      setPhase("confirm");
+    }
+  };
+
+  const processTurn = async (reply) => {
+    setStage(reply.stage);
+    setCollected(c => ({ ...c, ...reply.collected }));
+    setConvo(c => [...c, { role: "aurora", text: reply.spoken }]);
+    await speak(reply.spoken);
+    if (reply.isFinal) setStage("done");
+  };
+
+  const handleCancel = () => {
+    stoppedRef.current = true;
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch(e){} }
+    window.speechSynthesis?.cancel();
+    setPhase("idle");
+    setConvo([]);
+    setCollected({ specialty: null, reason: null, datetime: null });
+    setStage("greeting");
+  };
+
+  const handleConfirmSave = () => {
+    const code = "AUR-" + Math.random().toString(36).slice(2, 7).toUpperCase();
+    const appt = {
+      id: code,
+      ...collected,
+      patient: PATIENT.name,
+      patient_id: PATIENT.id,
+      phone: PATIENT.phone,
+      created_at: new Date().toISOString(),
+    };
+    saveVoiceAppt(appt);
+    setConfCode(code);
+    setPhase("success");
+    speak("Listo " + PATIENT.name.split(" ")[0] + ", su cita quedó confirmada. La esperamos.");
+  };
+
+  const handleEditByVoice = async () => {
+    setPhase("conversing");
+    setStage("confirming");
+    stoppedRef.current = false;
+    await speak("¿Qué desea corregir?");
+    try {
+      const t = await listen();
+      if (!t) return;
+      setConvo(c => [...c, { role: "user", text: t }]);
+      const reply = await askClaude(t);
+      if (!reply) return;
+      await processTurn(reply);
+      while (!stoppedRef.current && stageRef.current !== "done") {
+        const tt = await listen();
+        if (!tt) continue;
+        setConvo(c => [...c, { role: "user", text: tt }]);
+        const r2 = await askClaude(tt);
+        if (!r2) return;
+        await processTurn(r2);
+      }
+      if (!stoppedRef.current) setPhase("confirm");
+    } catch (e) { setPhase("confirm"); }
+  };
+
+  const reset = () => {
+    handleCancel();
+    setConfCode("");
+  };
+
+  const statusLabel = { idle: "En espera", listening: "Le escucho…", speaking: "Aurora habla", thinking: "Aurora piensa…" }[vState];
+  const stepLabel = { greeting: "Saludo", specialty: "Especialidad", reason: "Motivo", datetime: "Fecha y hora", confirming: "Confirmación", done: "Finalizado" }[stage] || "—";
+  const ledColor = { idle: C.grayMid, listening: C.mint, speaking: C.sky, thinking: C.navy }[vState];
+
+  // ─── IDLE ────────────────────────────────────────────────────
+  if (phase === "idle") return (
+    <div style={{ padding: "24px 20px 100px", background: C.grayLight, minHeight: "100%" }}>
+      <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 26, color: C.navy, marginBottom: 4 }}>Agendamiento por voz</div>
+      <div style={{ color: C.grayMid, fontSize: 16, marginBottom: 28 }}>Habla con Aurora — sin teclado, sin formularios</div>
+
+      <div style={{ background: `linear-gradient(145deg, ${C.navyDark}, ${C.navy})`, borderRadius: 28, padding: "36px 24px 32px", marginBottom: 20, textAlign: "center", boxShadow: `0 12px 40px ${C.navy}60`, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -80, right: -80, width: 240, height: 240, borderRadius: "50%", background: `radial-gradient(circle, ${C.sky}40, transparent 70%)`, animation: "auroraGlow 4s ease-in-out infinite" }} />
+        <div style={{ position: "absolute", bottom: -100, left: -80, width: 280, height: 280, borderRadius: "50%", background: `radial-gradient(circle, ${C.mint}30, transparent 70%)`, animation: "auroraGlow 5s ease-in-out infinite" }} />
+
+        <div style={{ position: "relative", zIndex: 2 }}>
+          <div style={{ fontSize: 11, color: C.sky, letterSpacing: 4, textTransform: "uppercase", fontWeight: 700, marginBottom: 14 }}>Recepcionista virtual</div>
+          <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 30, color: C.white, lineHeight: 1.1, marginBottom: 10 }}>Hola, soy <span style={{ background: `linear-gradient(90deg, ${C.sky}, ${C.mint})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontStyle: "italic" }}>Aurora</span></div>
+          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 15, marginBottom: 32, padding: "0 8px" }}>Agendo su cita médica en menos de un minuto. Solo con su voz.</div>
+
+          <button onClick={runConversation}
+            style={{ width: 110, height: 110, borderRadius: "50%", background: `linear-gradient(135deg, ${C.sky}, ${C.mint})`, color: C.white, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", boxShadow: `0 0 0 8px rgba(75,191,234,0.18), 0 12px 32px rgba(75,191,234,0.4)`, animation: "fabPulse 2.5s ease-in-out infinite" }}>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="3" width="6" height="12" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0" />
+              <path d="M12 18v3" />
+            </svg>
+          </button>
+          <div style={{ marginTop: 16, fontSize: 14, color: "rgba(255,255,255,0.8)", letterSpacing: 1 }}>Toque para empezar</div>
+        </div>
+      </div>
+
+      <div style={{ background: C.skyLight, borderRadius: 18, padding: 18, marginBottom: 16, display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <span style={{ fontSize: 28 }}>💡</span>
+        <div>
+          <div style={{ fontWeight: 800, color: C.navy, fontSize: 16, marginBottom: 4 }}>¿Cómo funciona?</div>
+          <div style={{ color: C.navy, fontSize: 14, lineHeight: 1.5 }}>Aurora le preguntará la especialidad, el motivo y el horario que prefiere. Hable con naturalidad.</div>
+        </div>
+      </div>
+
+      <div style={{ background: C.white, borderRadius: 20, padding: 18, boxShadow: "0 4px 14px rgba(0,0,0,0.05)" }}>
+        <div style={{ fontWeight: 800, color: C.navy, fontSize: 16, marginBottom: 12 }}>Especialidades disponibles</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {SPECIALTIES.map((s, i) => (
+            <div key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", background: C.grayLight, borderRadius: 999, fontSize: 13, color: C.gray, fontWeight: 600 }}>
+              <span>{s.icon}</span><span>{s.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // ─── CONVERSING ──────────────────────────────────────────────
+  if (phase === "conversing") return (
+    <div style={{ padding: "20px 20px 24px", background: `linear-gradient(180deg, ${C.navyDark} 0%, ${C.navy} 100%)`, minHeight: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
+      <div style={{ position: "absolute", top: -100, left: -100, width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, ${C.sky}30, transparent 70%)`, filter: "blur(40px)" }} />
+      <div style={{ position: "absolute", bottom: -100, right: -100, width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, ${C.mint}25, transparent 70%)`, filter: "blur(40px)" }} />
+
+      <div style={{ position: "relative", zIndex: 2, textAlign: "center", marginBottom: 8 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: ledColor, boxShadow: `0 0 10px ${ledColor}`, animation: vState !== "idle" ? "ledBlink 1.2s ease-in-out infinite" : "none" }} />
+          <span>{statusLabel}</span>
+        </div>
+        <div style={{ marginTop: 6, fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: 18, color: C.white, fontStyle: "italic" }}>{stepLabel}</div>
+      </div>
+
+      <div style={{ position: "relative", zIndex: 2, height: 160, display: "grid", placeItems: "center", margin: "8px 0 12px" }}>
+        <canvas ref={canvasRef} style={{ width: "100%", height: "100%" }} />
+      </div>
+
+      <div style={{ position: "relative", zIndex: 2, flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, padding: "4px 2px 12px", maxHeight: 320 }}>
+        {convo.map((t, i) => (
+          <div key={i}
+            style={{
+              alignSelf: t.role === "aurora" ? "flex-start" : "flex-end",
+              maxWidth: "88%",
+              padding: "10px 14px",
+              borderRadius: 18,
+              fontSize: 14,
+              lineHeight: 1.45,
+              animation: "bubbleIn 0.35s ease",
+              background: t.role === "aurora"
+                ? "linear-gradient(135deg, rgba(75,191,234,0.18), rgba(91,191,138,0.12))"
+                : "rgba(255,255,255,0.12)",
+              border: t.role === "aurora" ? `1px solid ${C.sky}40` : "1px solid rgba(255,255,255,0.15)",
+              color: C.white,
+              backdropFilter: "blur(6px)",
+            }}>
+            <div style={{ fontSize: 9, letterSpacing: 2, textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: 3, fontWeight: 700 }}>{t.role === "aurora" ? "Aurora" : "Tú"}</div>
+            {t.text}
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div style={{ position: "relative", zIndex: 2, background: "rgba(224,82,82,0.15)", border: `1px solid ${C.red}40`, color: "#ffb8b8", padding: "10px 14px", borderRadius: 12, fontSize: 13, marginBottom: 10 }}>{error}</div>
+      )}
+
+      <div style={{ position: "relative", zIndex: 2, display: "flex", gap: 10, justifyContent: "center", paddingTop: 8 }}>
+        <button onClick={handleCancel}
+          style={{ padding: "12px 22px", background: "rgba(255,255,255,0.08)", color: C.white, border: "1px solid rgba(255,255,255,0.18)", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── CONFIRM ─────────────────────────────────────────────────
+  if (phase === "confirm") return (
+    <div style={{ padding: "24px 20px 24px", background: C.grayLight, minHeight: "100%" }}>
+      <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 26, color: C.navy, marginBottom: 6 }}>¿Confirmamos su cita?</div>
+      <div style={{ color: C.grayMid, fontSize: 15, marginBottom: 20 }}>Revise los datos antes de guardar</div>
+
+      <div style={{ background: C.white, borderRadius: 22, padding: 22, marginBottom: 18, boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
+        {[
+          ["🏥 Clínica", "Genezen — Sede Principal"],
+          ["📋 Especialidad", collected.specialty || "—"],
+          ["💬 Motivo", collected.reason || "—"],
+          ["📅 Fecha y hora", collected.datetime || "—"],
+          ["🆔 Paciente", PATIENT.name],
+          ["📱 Teléfono", PATIENT.phone],
+        ].map(([l, v], i, arr) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "14px 0", borderBottom: i < arr.length - 1 ? "1px solid #EEF0F5" : "none", gap: 12 }}>
+            <span style={{ color: C.grayMid, fontSize: 15, flexShrink: 0 }}>{l}</span>
+            <span style={{ fontWeight: 700, color: C.navy, fontSize: 15, textAlign: "right" }}>{v}</span>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={handleConfirmSave}
+        style={{ width: "100%", padding: "20px", background: `linear-gradient(90deg, ${C.mint}, #3DAA75)`, color: C.white, border: "none", borderRadius: 18, fontSize: 19, fontWeight: 800, cursor: "pointer", boxShadow: `0 8px 24px ${C.mint}60`, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <span style={{ fontSize: 24 }}>✅</span> Confirmar y guardar
+      </button>
+      <button onClick={handleEditByVoice}
+        style={{ width: "100%", padding: "18px", background: "transparent", border: `2px solid ${C.navy}`, color: C.navy, borderRadius: 16, fontSize: 16, fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>
+        🎙️ Corregir por voz
+      </button>
+      <button onClick={reset}
+        style={{ width: "100%", padding: "16px", background: "transparent", border: "none", color: C.grayMid, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>
+        Cancelar
+      </button>
+    </div>
+  );
+
+  // ─── SUCCESS ─────────────────────────────────────────────────
+  if (phase === "success") return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", padding: 32, textAlign: "center", background: C.grayLight }}>
+      <div style={{ width: 90, height: 90, borderRadius: "50%", background: `linear-gradient(135deg, ${C.mint}, #3DAA75)`, display: "grid", placeItems: "center", marginBottom: 20, animation: "pop 0.5s ease", boxShadow: `0 12px 40px ${C.mint}60` }}>
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+      </div>
+      <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 28, color: C.navy, marginBottom: 8 }}>¡Cita agendada!</div>
+
+      <div style={{ background: `linear-gradient(135deg, ${C.navyDark}, ${C.navy})`, color: C.white, borderRadius: 22, padding: 24, marginBottom: 22, width: "100%" }}>
+        <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 6 }}>Su cita está confirmada</div>
+        <div style={{ fontWeight: 900, fontSize: 22, marginBottom: 4 }}>{collected.specialty}</div>
+        <div style={{ color: C.sky, fontSize: 16 }}>{collected.datetime}</div>
+        <div style={{ marginTop: 14, background: "rgba(255,255,255,0.15)", borderRadius: 14, padding: "14px 16px", fontSize: 14, textAlign: "left" }}>
+          <div>📋 {collected.reason}</div>
+          <div style={{ marginTop: 6 }}>📍 Clínica Genezen — Sede Principal</div>
+          <div style={{ marginTop: 6 }}>🔔 Le notificaremos 24h antes</div>
+        </div>
+      </div>
+
+      <div style={{ padding: "8px 16px", border: `1px dashed ${C.navy}40`, borderRadius: 10, fontFamily: "monospace", fontSize: 13, letterSpacing: 3, color: C.navy, marginBottom: 24 }}>{confCode}</div>
+
+      <button onClick={reset} style={{ padding: "18px 36px", background: C.sky, color: C.white, border: "none", borderRadius: 16, fontSize: 17, fontWeight: 700, cursor: "pointer" }}>Nueva conversación</button>
+    </div>
+  );
+
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RECORDS (simplificado, sin scannedDocs)
+// ═══════════════════════════════════════════════════════════════
+function RecordsScreen({ onApiKeyMissing }) {
+  const [expanded, setExpanded] = useState(null);
+  const [aiSummary, setAiSummary] = useState("");
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [voiceAppts, setVoiceAppts] = useState([]);
+
+  useEffect(() => { setVoiceAppts(loadVoiceAppts()); }, []);
+
+  const handleAI = async () => {
+    const apiKey = getApiKey();
+    if (!apiKey) { onApiKeyMissing(); return; }
+    setLoadingAI(true); setAiSummary("");
+    const prompt = `Eres un asistente médico de Clínica Genezen. Resume en lenguaje muy sencillo (para un paciente de 67 años) el historial médico del paciente Carlos Alberto Ruiz. Datos: Última consulta: Hipertensión arterial leve con Dra. Gómez (Cardiología) el 12 Mayo 2026. Exámenes: Hemograma completo normal (3 Abril 2026). Control preventivo anual con Dr. Pardo (18 Feb 2026). Vitales: Presión 128/82, Glucosa 98 mg/dL, Peso 74kg. Sé positivo, claro, breve (máx 4 frases), y al final da una recomendación de salud simple.`;
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 600, messages: [{ role: "user", content: prompt }] })
+      });
+      if (!res.ok) { if (res.status === 401 || res.status === 403) onApiKeyMissing(); throw new Error("HTTP " + res.status); }
+      const data = await res.json();
+      setAiSummary(data.content?.find(b => b.type === "text")?.text || "No disponible.");
+    } catch { setAiSummary("No disponible en este momento."); }
+    setLoadingAI(false);
+  };
+
+  const allRecords = [
+    ...voiceAppts.map(a => ({
+      date: new Date(a.created_at).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }),
+      type: "Cita agendada por voz",
+      doctor: a.specialty ? "Especialidad: " + a.specialty : "—",
+      dx: (a.reason || "—") + " • " + (a.datetime || "—") + " • Cód. " + a.id,
+      tag: "🎙️ Por voz",
+      voice: true,
+    })),
+    ...RECORDS,
+  ];
+
+  return (
+    <div style={{ padding: "24px 20px 100px", background: C.grayLight, minHeight: "100%" }}>
+      <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 26, color: C.navy, marginBottom: 4 }}>Historia Clínica</div>
+      <div style={{ color: C.grayMid, fontSize: 16, marginBottom: 24 }}>{PATIENT.name} • {PATIENT.id}</div>
+      <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.navyDark})`, borderRadius: 22, padding: 22, marginBottom: 20, color: C.white }}>
+        <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16 }}>
+          <Avatar initials={PATIENT.avatar} size={58} bg={C.sky} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 20 }}>{PATIENT.name}</div>
+            <div style={{ opacity: 0.8, fontSize: 15 }}>{PATIENT.age} años • {PATIENT.blood} • EPS: {PATIENT.eps}</div>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          {[{ l: "Presión", v: PATIENT.vitals.bp }, { l: "Glucosa", v: "98 mg/dL" }, { l: "Peso", v: PATIENT.vitals.weight }].map((x, i) => (
+            <div key={i} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "10px 8px", textAlign: "center" }}>
+              <div style={{ fontWeight: 900, fontSize: 16 }}>{x.v}</div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>{x.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <button onClick={handleAI} disabled={loadingAI}
+        style={{ width: "100%", padding: "20px", background: loadingAI ? C.grayMid : `linear-gradient(90deg, ${C.mint}, #3DAA75)`, color: C.white, border: "none", borderRadius: 18, fontSize: 18, fontWeight: 800, cursor: "pointer", boxShadow: `0 6px 20px ${C.mint}60`, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <span style={{ fontSize: 24 }}>🤖</span>
+        {loadingAI ? "Analizando historia clínica…" : "Resumen inteligente con IA"}
+      </button>
+      {aiSummary && (
+        <div style={{ background: C.mintLight, border: `2px solid ${C.mint}`, borderRadius: 18, padding: 20, marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}><span style={{ fontSize: 20 }}>✅</span><span style={{ fontWeight: 800, color: "#2D7A55", fontSize: 17 }}>Su resumen de salud</span></div>
+          <p style={{ margin: 0, color: "#1E5E3E", fontSize: 17, lineHeight: 1.6 }}>{aiSummary}</p>
+        </div>
+      )}
+      {voiceAppts.length > 0 && (
+        <div style={{ background: C.skyLight, borderRadius: 16, padding: "12px 16px", marginBottom: 16, display: "flex", gap: 10, alignItems: "center" }}>
+          <span style={{ fontSize: 22 }}>🎙️</span>
+          <span style={{ color: C.navy, fontWeight: 700, fontSize: 16 }}>{voiceAppts.length} cita(s) agendada(s) por voz</span>
+        </div>
+      )}
+      <div style={{ fontWeight: 800, fontSize: 18, color: C.navy, marginBottom: 14 }}>📁 Todos los registros</div>
+      {allRecords.map((r, i) => (
+        <div key={i} onClick={() => setExpanded(expanded === i ? null : i)}
+          style={{ background: C.white, borderRadius: 20, padding: 20, marginBottom: 12, boxShadow: "0 4px 14px rgba(0,0,0,0.06)", cursor: "pointer", border: expanded === i ? `2px solid ${C.sky}` : r.voice ? `2px solid ${C.sky}30` : "2px solid transparent" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <Badge color={r.voice ? C.sky : r.tag === "Laboratorio" ? C.mint : C.navy}>{r.tag}</Badge>
+              <div style={{ fontWeight: 800, fontSize: 18, color: C.gray, marginTop: 8 }}>{r.type}</div>
+              <div style={{ color: C.grayMid, fontSize: 15, marginTop: 2 }}>{r.doctor}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ color: C.grayMid, fontSize: 14 }}>{r.date}</div>
+              <div style={{ fontSize: 20, marginTop: 6 }}>{expanded === i ? "▲" : "▼"}</div>
+            </div>
+          </div>
+          {expanded === i && (
+            <div style={{ marginTop: 14, padding: 16, background: C.grayLight, borderRadius: 14 }}>
+              <div style={{ fontWeight: 700, color: C.navy, fontSize: 16 }}>🔍 {r.voice ? "Detalle de la cita:" : "Diagnóstico / Resultado:"}</div>
+              <div style={{ color: C.gray, fontSize: 17, marginTop: 6 }}>{r.dx}</div>
+              <button style={{ marginTop: 14, padding: "12px 20px", background: C.sky, color: C.white, border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>📄 Ver documento completo</button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOK (manual — IGUAL que v1)
+// ═══════════════════════════════════════════════════════════════
+function BookScreen() {
+  const [step, setStep] = useState(1);
+  const [specialty, setSpecialty] = useState(null);
+  const [doctor, setDoctor] = useState(null);
+  const [time, setTime] = useState(null);
+  const [booked, setBooked] = useState(false);
+  const doctors = DOCTORS[specialty] || DOCTORS["Medicina General"];
+  const StepDot = ({ n }) => (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      <div style={{ width: 36, height: 36, borderRadius: "50%", background: step >= n ? C.navy : "#DDE3F0", color: step >= n ? C.white : C.grayMid, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16 }}>{n}</div>
+      <div style={{ fontSize: 11, color: step >= n ? C.navy : C.grayMid, fontWeight: 600 }}>{["", "Especialidad", "Médico", "Horario", "Confirmar"][n]}</div>
+    </div>
+  );
+  if (booked) return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", padding: 32, textAlign: "center", background: C.grayLight }}>
+      <div style={{ fontSize: 80, marginBottom: 20 }}>🎉</div>
+      <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 28, color: C.navy, marginBottom: 12 }}>¡Cita agendada!</div>
+      <div style={{ background: C.navy, color: C.white, borderRadius: 24, padding: 28, marginBottom: 24, width: "100%" }}>
+        <div style={{ fontSize: 18, opacity: 0.8, marginBottom: 6 }}>Su cita está confirmada</div>
+        <div style={{ fontWeight: 900, fontSize: 24, marginBottom: 4 }}>{doctor?.name}</div>
+        <div style={{ color: C.sky, fontSize: 18 }}>{specialty} • {time}</div>
+        <div style={{ marginTop: 16, background: "rgba(255,255,255,0.15)", borderRadius: 14, padding: 16, fontSize: 16 }}>📅 Martes 27 Mayo 2026<br />📍 Clínica Genezen — Sede Principal<br />🔔 Le notificaremos 24h antes</div>
+      </div>
+      <button onClick={() => { setStep(1); setSpecialty(null); setDoctor(null); setTime(null); setBooked(false); }} style={{ padding: "18px 40px", background: C.sky, color: C.white, border: "none", borderRadius: 16, fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Volver al inicio</button>
+    </div>
+  );
+  return (
+    <div style={{ padding: "24px 20px 100px", background: C.grayLight, minHeight: "100%" }}>
+      <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 26, color: C.navy, marginBottom: 20 }}>Agendar Cita</div>
+      <div style={{ background: C.white, borderRadius: 20, padding: 20, marginBottom: 24, display: "flex", justifyContent: "space-around", alignItems: "flex-start" }}>
+        <StepDot n={1} /><div style={{ height: 2, background: step > 1 ? C.navy : "#DDE3F0", flex: 1, marginTop: 18 }} />
+        <StepDot n={2} /><div style={{ height: 2, background: step > 2 ? C.navy : "#DDE3F0", flex: 1, marginTop: 18 }} />
+        <StepDot n={3} /><div style={{ height: 2, background: step > 3 ? C.navy : "#DDE3F0", flex: 1, marginTop: 18 }} />
+        <StepDot n={4} />
+      </div>
+      {step === 1 && (
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 20, color: C.gray, marginBottom: 16 }}>¿Qué especialidad necesita?</div>
+          {SPECIALTIES.slice(0, 6).map((s, i) => (
+            <button key={i} onClick={() => { setSpecialty(s.name); setStep(2); }}
+              style={{ width: "100%", background: C.white, color: C.gray, border: "2px solid #DDE3F0", borderRadius: 18, padding: "20px 22px", marginBottom: 10, cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <span style={{ fontSize: 32 }}>{s.icon}</span>
+                <span style={{ fontWeight: 800, fontSize: 19 }}>{s.name}</span>
+              </div>
+              <Badge color={C.mint}>{s.available} disponibles</Badge>
+            </button>
+          ))}
+        </div>
+      )}
+      {step === 2 && (
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 20, color: C.gray, marginBottom: 6 }}>Seleccione su médico</div>
+          <div style={{ color: C.grayMid, fontSize: 16, marginBottom: 20 }}>Especialidad: <strong style={{ color: C.navy }}>{specialty}</strong></div>
+          {doctors.map((d, i) => (
+            <button key={i} onClick={() => { setDoctor(d); setStep(3); }}
+              style={{ width: "100%", background: C.white, border: "2px solid #DDE3F0", borderRadius: 20, padding: 22, marginBottom: 14, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                <Avatar initials={d.name.split(" ").map(n => n[0]).join("").slice(0, 2)} size={54} bg={C.navy} />
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 19, color: C.gray }}>{d.name}</div>
+                  <div style={{ color: C.grayMid, fontSize: 15, marginTop: 2 }}>⭐ {d.rating} • {d.exp}</div>
+                  <div style={{ marginTop: 6 }}><Badge color={C.mint}>Disponible hoy</Badge></div>
+                </div>
+              </div>
+            </button>
+          ))}
+          <button onClick={() => setStep(1)} style={{ width: "100%", padding: 18, background: "transparent", border: `2px solid ${C.navy}`, color: C.navy, borderRadius: 16, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>← Cambiar especialidad</button>
+        </div>
+      )}
+      {step === 3 && (
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 20, color: C.gray, marginBottom: 6 }}>Escoja su horario</div>
+          <div style={{ color: C.grayMid, fontSize: 16, marginBottom: 20 }}>{doctor?.name}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+            {doctor?.times.map((t, i) => (
+              <button key={i} onClick={() => setTime(t)}
+                style={{ padding: "20px 10px", background: time === t ? C.navy : C.white, color: time === t ? C.white : C.gray, border: `2px solid ${time === t ? C.navy : "#DDE3F0"}`, borderRadius: 16, fontSize: 18, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                {t}
+              </button>
+            ))}
+          </div>
+          {time && <button onClick={() => setStep(4)} style={{ width: "100%", padding: "22px", background: `linear-gradient(90deg, ${C.navyDark}, ${C.navy})`, color: C.white, border: "none", borderRadius: 18, fontSize: 20, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Confirmar horario →</button>}
+          <button onClick={() => setStep(2)} style={{ width: "100%", padding: 18, background: "transparent", border: `2px solid ${C.navy}`, color: C.navy, borderRadius: 16, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 10 }}>← Cambiar médico</button>
+        </div>
+      )}
+      {step === 4 && (
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 20, color: C.gray, marginBottom: 20 }}>Confirme su cita</div>
+          <div style={{ background: C.white, borderRadius: 22, padding: 24, marginBottom: 20 }}>
+            {[["🏥 Clínica", "Genezen — Sede Principal"], ["📋 Especialidad", specialty], ["👨‍⚕️ Médico", doctor?.name], ["📅 Fecha", "Martes 27 Mayo 2026"], ["⏰ Hora", time], ["🆔 Paciente", PATIENT.name]].map(([l, v], i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "14px 0", borderBottom: i < 5 ? "1px solid #EEF0F5" : "none" }}>
+                <span style={{ color: C.grayMid, fontSize: 17 }}>{l}</span>
+                <span style={{ fontWeight: 700, color: C.navy, fontSize: 17, textAlign: "right" }}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setBooked(true)} style={{ width: "100%", padding: "22px", background: `linear-gradient(90deg, ${C.mint}, #3DAA75)`, color: C.white, border: "none", borderRadius: 18, fontSize: 20, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", marginBottom: 12 }}>✅ Confirmar cita</button>
+          <button onClick={() => setStep(3)} style={{ width: "100%", padding: 18, background: "transparent", border: `2px solid ${C.navy}`, color: C.navy, borderRadius: 16, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>← Volver</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NOTIFS
+// ═══════════════════════════════════════════════════════════════
+function NotifsScreen() {
+  const [notifs, setNotifs] = useState(NOTIFICATIONS);
+  const markRead = (id) => setNotifs(n => n.map(x => x.id === id ? { ...x, unread: false } : x));
+  return (
+    <div style={{ padding: "24px 20px 100px", background: C.grayLight, minHeight: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 26, color: C.navy }}>Notificaciones</div>
+        <button onClick={() => setNotifs(n => n.map(x => ({ ...x, unread: false })))} style={{ background: "transparent", border: "none", color: C.sky, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Leer todas</button>
+      </div>
+      {notifs.map((n) => (
+        <div key={n.id} onClick={() => markRead(n.id)}
+          style={{ background: n.unread ? C.white : C.grayLight, border: `2px solid ${n.unread ? C.sky + "50" : "transparent"}`, borderRadius: 20, padding: 20, marginBottom: 12, cursor: "pointer", display: "flex", gap: 16 }}>
+          <div style={{ fontSize: 36, flexShrink: 0 }}>{n.icon}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ fontWeight: 800, fontSize: 18, color: C.navy }}>{n.title}</div>
+              {n.unread && <div style={{ width: 10, height: 10, borderRadius: "50%", background: C.sky, flexShrink: 0, marginTop: 6 }} />}
+            </div>
+            <div style={{ color: C.gray, fontSize: 16, marginTop: 4 }}>{n.msg}</div>
+            <div style={{ color: C.grayMid, fontSize: 14, marginTop: 6 }}>{n.time}</div>
+          </div>
+        </div>
+      ))}
+      <div style={{ background: C.mintLight, borderRadius: 18, padding: 20, marginTop: 8, display: "flex", gap: 12 }}>
+        <span style={{ fontSize: 24 }}>📞</span>
+        <div>
+          <div style={{ fontWeight: 700, color: "#2D7A55", fontSize: 16 }}>¿Necesita ayuda?</div>
+          <div style={{ color: "#2D7A55", fontSize: 15 }}>Llame: 018000-GENEZEN</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APP
+// ═══════════════════════════════════════════════════════════════
+function App() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [screen, setScreen] = useState("home");
+  const [notifCount, setNotifCount] = useState(2);
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [apiKeyMessage, setApiKeyMessage] = useState("");
+
+  const handleNav = (s) => { setScreen(s); if (s === "notif") setNotifCount(0); };
+
+  const openApiKeyModal = (msg) => {
+    setApiKeyMessage(msg || "");
+    setApiKeyModalOpen(true);
+  };
+
+  const NAV_ITEMS = [
+    { id: "home", icon: "🏠", label: "Inicio" },
+    { id: "records", icon: "📋", label: "Historial" },
+    { id: "voice", icon: "🎙️", label: "Por voz", fab: true },
+    { id: "book", icon: "🗓️", label: "Agendar" },
+    { id: "notif", icon: "🔔", label: "Avisos" },
+  ];
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", minHeight: "100vh", background: "#0F1923", padding: "20px 0" }}>
+      <div style={{ width: 390, background: C.grayLight, borderRadius: 44, overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,0.6), inset 0 0 0 10px #1A1A2E", minHeight: 844, maxHeight: 844, display: "flex", flexDirection: "column", position: "relative" }}>
+        {/* Status bar */}
+        <div style={{ background: C.navyDark, padding: "12px 24px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>9:41</span>
+          <div style={{ width: 120, height: 22, background: "#0F1923", borderRadius: 11 }} />
+          <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>📶 🔋</span>
+        </div>
+
+        {/* API key access button (top-right when logged in) */}
+        {loggedIn && (
+          <button
+            onClick={() => openApiKeyModal()}
+            style={{ position: "absolute", top: 50, right: 14, zIndex: 30, background: "rgba(255,255,255,0.15)", color: C.white, border: "none", borderRadius: 999, padding: "4px 10px", fontSize: 10, fontWeight: 700, cursor: "pointer", letterSpacing: 1, backdropFilter: "blur(8px)" }}
+            title="Configurar API key">
+            🔑 API
+          </button>
+        )}
+
+        {/* Screen */}
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+          {!loggedIn && <LoginScreen onLogin={() => setLoggedIn(true)} />}
+          {loggedIn && screen === "home" && <HomeScreen onNav={handleNav} notifCount={notifCount} />}
+          {loggedIn && screen === "records" && <RecordsScreen onApiKeyMissing={() => openApiKeyModal("Para usar el resumen con IA necesita su API key de Anthropic.")} />}
+          {loggedIn && screen === "voice" && <VoiceBookScreen onApiKeyMissing={() => openApiKeyModal("Para que Aurora pueda atenderlo necesita su API key de Anthropic.")} />}
+          {loggedIn && screen === "book" && <BookScreen />}
+          {loggedIn && screen === "notif" && <NotifsScreen />}
+        </div>
+
+        {/* Bottom nav with FAB (microphone) */}
+        {loggedIn && (
+          <div style={{ background: C.white, borderTop: "1px solid #EEF0F5", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 0 18px", boxShadow: "0 -4px 20px rgba(0,0,0,0.08)", position: "relative" }}>
+            {NAV_ITEMS.map(item => item.fab ? (
+              <button key={item.id} onClick={() => handleNav(item.id)}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "none", cursor: "pointer", padding: 0, marginTop: -22 }}>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg, ${C.navyDark}, ${C.sky})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 6px 20px ${C.navy}60`, animation: screen !== "voice" ? "fabPulse 2.5s ease-in-out infinite" : "none", border: `3px solid ${C.white}` }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="3" width="6" height="12" rx="3" />
+                    <path d="M5 11a7 7 0 0 0 14 0" />
+                    <path d="M12 18v3" />
+                  </svg>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: screen === item.id ? 800 : 600, color: screen === item.id ? C.navy : C.grayMid, fontFamily: "inherit", marginTop: 2 }}>{item.label}</div>
+              </button>
+            ) : (
+              <button key={item.id} onClick={() => handleNav(item.id)}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "none", cursor: "pointer", padding: "4px 12px", position: "relative" }}>
+                <div style={{ fontSize: 24, filter: screen === item.id ? "none" : "grayscale(0.5) opacity(0.55)" }}>{item.icon}</div>
+                <div style={{ fontSize: 11, fontWeight: screen === item.id ? 800 : 600, color: screen === item.id ? C.navy : C.grayMid, fontFamily: "inherit" }}>{item.label}</div>
+                {screen === item.id && <div style={{ position: "absolute", bottom: -2, width: 24, height: 3, background: C.navy, borderRadius: 2 }} />}
+                {item.id === "notif" && notifCount > 0 && <div style={{ position: "absolute", top: 0, right: 6, background: C.red, color: C.white, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>{notifCount}</div>}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Home indicator */}
+        <div style={{ background: loggedIn ? C.white : C.grayLight, padding: "6px 0 10px", display: "flex", justifyContent: "center" }}>
+          <div style={{ width: 130, height: 5, background: "#C0C8D4", borderRadius: 3 }} />
+        </div>
+
+        <ApiKeyModal open={apiKeyModalOpen} onClose={() => setApiKeyModalOpen(false)} initialMessage={apiKeyMessage} />
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+  </script>
+</body>
+</html>
