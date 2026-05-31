@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Aurora · Clínica Genezen</title>
+  <title>Aurora</title>
+  <meta name="description" content="Agendamiento de citas médicas por voz con Aurora" />
+  <meta name="theme-color" content="#2B4DA8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Aurora" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-180.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet" />
@@ -29,6 +38,9 @@
     @keyframes bubbleIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
     @keyframes pop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
     @keyframes spinSlow { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    @media (display-mode: standalone) {
+      body { background: #F4F6FA; }
+    }
   </style>
 </head>
 <body>
@@ -136,8 +148,9 @@ function LoginScreen({ onLogin }) {
   return (
     <div style={{ minHeight: "100%", background: `linear-gradient(160deg, ${C.navyDark} 0%, ${C.navy} 55%, ${C.sky} 100%)`, display: "flex", flexDirection: "column", padding: "0 0 32px" }}>
       <div style={{ padding: "52px 32px 32px", textAlign: "center" }}>
-        <img src="data:image/jpeg;base64,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" alt="Clínica Genezen" style={{ width: 260, display: "block", margin: "0 auto 12px", borderRadius: 8 }} />
-        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 16, marginTop: 8 }}>Su salud, nuestra prioridad</div>
+        <img src="/icons/icon-128.png" alt="Aurora" style={{ width: 96, height: 96, display: "block", margin: "0 auto 16px", borderRadius: 22, boxShadow: "0 12px 32px rgba(0,0,0,0.25)" }} />
+        <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 40, color: C.white, letterSpacing: -1 }}>Aurora</div>
+        <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 16, marginTop: 8 }}>Asistente de citas por voz</div>
       </div>
       <div style={{ background: C.white, borderRadius: "32px 32px 0 0", flex: 1, padding: "36px 28px" }}>
         <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, fontSize: 24, color: C.navy, marginBottom: 8 }}>Bienvenido</div>
@@ -1015,6 +1028,79 @@ function NotifsScreen({ extraNotifs = [] }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// PWA · INSTALACIÓN
+// ═══════════════════════════════════════════════════════════════
+const isStandalonePWA = () =>
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.navigator.standalone === true;
+
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+function InstallPrompt() {
+  const [deferred, setDeferred] = useState(null);
+  const [showIOS, setShowIOS] = useState(false);
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem("aurora_pwa_dismissed") === "1");
+
+  useEffect(() => {
+    if (isStandalonePWA() || dismissed) return;
+    const onInstall = (e) => { e.preventDefault(); setDeferred(e); };
+    window.addEventListener("beforeinstallprompt", onInstall);
+    if (isIOS()) setShowIOS(true);
+    return () => window.removeEventListener("beforeinstallprompt", onInstall);
+  }, [dismissed]);
+
+  const dismiss = () => {
+    localStorage.setItem("aurora_pwa_dismissed", "1");
+    setDismissed(true);
+    setDeferred(null);
+    setShowIOS(false);
+  };
+
+  const install = async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice;
+    dismiss();
+  };
+
+  if (dismissed || isStandalonePWA()) return null;
+  if (!deferred && !showIOS) return null;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(15,25,35,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: C.white, borderRadius: 24, padding: "24px 22px", width: "100%", maxWidth: 390, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
+        <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 14 }}>
+          <img src="/icons/icon-96.png" alt="" width={56} height={56} style={{ borderRadius: 14 }} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 18, color: C.navy }}>Instalar Aurora</div>
+            <div style={{ color: C.grayMid, fontSize: 14, marginTop: 2 }}>Acceso directo desde su celular</div>
+          </div>
+        </div>
+        {showIOS && !deferred ? (
+          <div style={{ color: C.gray, fontSize: 15, lineHeight: 1.5, marginBottom: 18 }}>
+            En <strong>Safari</strong>, toque <strong>Compartir</strong> abajo y elija <strong>Agregar a pantalla de inicio</strong>.
+          </div>
+        ) : (
+          <div style={{ color: C.gray, fontSize: 15, lineHeight: 1.5, marginBottom: 18 }}>
+            Instale la app para abrir Aurora con un toque, sin usar el navegador.
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 10 }}>
+          {deferred && (
+            <button onClick={install} style={{ flex: 1, padding: "14px 16px", borderRadius: 14, border: "none", background: C.navy, color: C.white, fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
+              Instalar
+            </button>
+          )}
+          <button onClick={dismiss} style={{ flex: deferred ? 0 : 1, padding: "14px 20px", borderRadius: 14, border: `2px solid #DDE3F0`, background: C.white, color: C.gray, fontWeight: 700, fontSize: 16, cursor: "pointer" }}>
+            {deferred ? "Ahora no" : "Entendido"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // APP
 // ═══════════════════════════════════════════════════════════════
 function App() {
@@ -1022,6 +1108,7 @@ function App() {
   const [screen, setScreen] = useState("home");
   const [notifCount, setNotifCount] = useState(2);
   const [voiceNotifs, setVoiceNotifs] = useState([]);
+  const [standalone] = useState(() => isStandalonePWA());
 
   const handleNav = (s) => { setScreen(s); if (s === "notif") setNotifCount(0); };
 
@@ -1046,15 +1133,25 @@ function App() {
     { id: "notif", icon: "🔔", label: "Avisos" },
   ];
 
+  const shellOuter = standalone
+    ? { display: "flex", minHeight: "100vh", background: C.grayLight, padding: 0 }
+    : { display: "flex", justifyContent: "center", alignItems: "flex-start", minHeight: "100vh", background: "#0F1923", padding: "20px 0" };
+  const shellInner = standalone
+    ? { width: "100%", maxWidth: "100%", background: C.grayLight, borderRadius: 0, overflow: "hidden", boxShadow: "none", minHeight: "100vh", maxHeight: "none", display: "flex", flexDirection: "column", position: "relative" }
+    : { width: 390, background: C.grayLight, borderRadius: 44, overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,0.6), inset 0 0 0 10px #1A1A2E", minHeight: 844, maxHeight: 844, display: "flex", flexDirection: "column", position: "relative" };
+
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", minHeight: "100vh", background: "#0F1923", padding: "20px 0" }}>
-      <div style={{ width: 390, background: C.grayLight, borderRadius: 44, overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,0.6), inset 0 0 0 10px #1A1A2E", minHeight: 844, maxHeight: 844, display: "flex", flexDirection: "column", position: "relative" }}>
-        {/* Status bar */}
+    <>
+      <InstallPrompt />
+      <div style={shellOuter}>
+      <div style={shellInner}>
+        {!standalone && (
         <div style={{ background: C.navyDark, padding: "12px 24px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>9:41</span>
           <div style={{ width: 120, height: 22, background: "#0F1923", borderRadius: 11 }} />
           <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>📶 🔋</span>
         </div>
+        )}
 
         {/* Screen */}
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
@@ -1068,7 +1165,7 @@ function App() {
 
         {/* Bottom nav with FAB (microphone) */}
         {loggedIn && (
-          <div style={{ background: C.white, borderTop: "1px solid #EEF0F5", display: "flex", justifyContent: "space-around", alignItems: "center", padding: "8px 0 18px", boxShadow: "0 -4px 20px rgba(0,0,0,0.08)", position: "relative" }}>
+          <div style={{ background: C.white, borderTop: "1px solid #EEF0F5", display: "flex", justifyContent: "space-around", alignItems: "center", padding: standalone ? "8px 0 max(18px, env(safe-area-inset-bottom))" : "8px 0 18px", boxShadow: "0 -4px 20px rgba(0,0,0,0.08)", position: "relative" }}>
             {NAV_ITEMS.map(item => item.fab ? (
               <button key={item.id} onClick={() => handleNav(item.id)}
                 style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "none", cursor: "pointer", padding: 0, marginTop: -22 }}>
@@ -1093,17 +1190,26 @@ function App() {
           </div>
         )}
 
-        {/* Home indicator */}
+        {!standalone && (
         <div style={{ background: loggedIn ? C.white : C.grayLight, padding: "6px 0 10px", display: "flex", justifyContent: "center" }}>
           <div style={{ width: 130, height: 5, background: "#C0C8D4", borderRadius: 3 }} />
         </div>
+        )}
       </div>
     </div>
+    </>
   );
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);
+  </script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/sw.js").catch(function () {});
+      });
+    }
   </script>
 </body>
 </html>

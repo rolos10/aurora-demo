@@ -30,17 +30,38 @@ Sigue las instrucciones; Vercel detecta el `index.html` y lo sirve como sitio es
 
 Vercel te da una URL pública tipo `https://aurora-demo-xxxx.vercel.app`.
 
+Configura la variable de entorno **`ANTHROPIC_API_KEY`** en el dashboard de Vercel (Settings → Environment Variables) para que Aurora y el resumen de historia clínica funcionen.
+
+## Instalar como app en el celular (PWA)
+
+La demo se puede **instalar con icono en la pantalla de inicio**, sin App Store ni Play Store.
+
+### Android (Chrome)
+
+1. Abra la URL en **Chrome**.
+2. Aparecerá el aviso **Instalar Aurora** (o menú ⋮ → **Instalar aplicación**).
+3. Confirme. Quedará el icono **Aurora** en el launcher.
+4. Al abrirla, corre a pantalla completa como una app.
+
+### iPhone (Safari)
+
+1. Abra la URL en **Safari** (no Chrome).
+2. Toque **Compartir** (cuadrado con flecha).
+3. Elija **Agregar a pantalla de inicio**.
+4. Confirme el nombre **Aurora** y toque **Agregar**.
+
+### Qué incluye la PWA
+
+- `manifest.webmanifest` — nombre, colores, iconos, modo `standalone`
+- `sw.js` — service worker para instalación y cache offline básico
+- `icons/` — iconos en varios tamaños (192, 512, etc.)
+- Layout adaptado cuando se abre instalada (pantalla completa, sin marco de “teléfono demo”)
+
+> **Tip para la demo:** genere un QR con la URL de Vercel para que el cliente instale la app en su celular en segundos.
+
 ## Antes de la demo al prospecto
 
-La primera vez que abras la URL en el dispositivo de demo:
-
-1. Toca **🔑 API** arriba a la derecha (visible una vez logueado)
-2. Pega tu API key de Anthropic (`sk-ant-...`) — la consigues en [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
-3. Guardar
-
-La key queda en `localStorage` del navegador del dispositivo de demo. No queda expuesta en el código ni en el deploy.
-
-> **Importante:** para producción real conviene poner un proxy serverless en Vercel (`api/chat.js`) que oculte la key. Para el demo de prospecto con un dispositivo controlado, este enfoque es suficiente.
+La API key de Anthropic debe estar configurada en **Vercel** (`ANTHROPIC_API_KEY`). No se expone en el código ni en el navegador del usuario.
 
 ## Requisitos del navegador del demo
 
@@ -64,9 +85,10 @@ Una vez confirmado, la cita queda guardada en `localStorage` y aparece en la His
 
 - Una sola página: `index.html` (sin build step)
 - React 18 + Babel Standalone vía CDN
+- **PWA** instalable (`manifest.webmanifest` + service worker)
 - Web Speech API (reconocimiento + síntesis del navegador)
-- Anthropic Messages API directamente desde browser (Claude Sonnet 4)
-- `localStorage` para persistir citas y API key
+- Anthropic Messages API vía proxy serverless (`api/chat.js`, Claude Sonnet 4)
+- `localStorage` para persistir citas
 
 ## Notas para el prospecto
 
